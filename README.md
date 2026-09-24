@@ -40,6 +40,17 @@ GitHub Actions 每日构建的中国直连分流规则集（多格式）。
 DOMAIN-SET,https://raw.githubusercontent.com/incohua/cn-ruleset-convert/release/ls-direct.domains,DIRECT
 ```
 
+## 下载链接（全部实测可达）
+
+| 文件 | 链接 |
+|---|---|
+| `ls-direct.srs` | `https://raw.githubusercontent.com/incohua/cn-ruleset-convert/release/ls-direct.srs` |
+| `ls-direct.srs`（jsDelivr CDN） | `https://cdn.jsdelivr.net/gh/incohua/cn-ruleset-convert@release/ls-direct.srs` |
+| `ls-direct.domains` | `https://raw.githubusercontent.com/incohua/cn-ruleset-convert/release/ls-direct.domains` |
+| `ls-direct.domains`（jsDelivr CDN） | `https://cdn.jsdelivr.net/gh/incohua/cn-ruleset-convert@release/ls-direct.domains` |
+
+> jsDelivr 缓存有延迟（约 12h），追新用 raw 直链；国内网络环境可用 jsDelivr 或 `ghproxy.net` 前缀加速。
+
 ## 构建安全
 
 - 上游域名数 < 1000 时构建直接失败，不会发布空规则集
