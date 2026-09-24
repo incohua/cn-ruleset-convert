@@ -1,0 +1,68 @@
+name: Build CN direct rule-sets daily
+
+on:
+  schedule:
+    - cron: '30 21 * * *'   # 21:30 UTC = 05:30 CST daily
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Loyalsoldier aggregate list
+        run: |
+          curl -fsSL --retry 3 -o direct.yaml \
+            https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/direct.txt
+
+      - name: Parse and generate source json
+        run: |
+          python3 - << 'PY'
+          import json
+          doms = []
+          for l in open("direct.yaml", encoding="utf-8").read().splitlines():
+              l = l.strip()
+              if l.startswith("- "):
+                  d = l[2:].strip()
+                  if len(d) >= 2 and d[0] == "'" and d[-1] == "'":
+                      d = d[1:-1]
+                  if d.startswith("+."):
+                      d = d[2:]
+                  if d:
+                      doms.append(d)
+          if len(doms) < 1000:
+              raise SystemExit(f"suspicious domain count: {len(doms)} (upstream broken?)")
+          rs = {"version": 3, "rules": [{"domain_suffix": doms}]}
+          json.dump(rs, open("ls-direct.json", "w"))
+          print(f"parsed {len(doms)} domains")
+
+          # Surge DOMAIN-SET (plain domain list, one per line)
+          with open("ls-direct.domains", "w") as f:
+              f.write("\n".join(doms) + "\n")
+          PY
+
+      - name: Install sing-box
+        run: |
+          curl -fsSL --retry 3 -o sing-box.tar.gz \
+            https://github.com/SagerNet/sing-box/releases/download/v1.12.0/sing-box-1.12.0-linux-amd64.tar.gz
+          tar xzf sing-box.tar.gz
+          sudo mv sing-box-*/sing-box /usr/local/bin/
+          sing-box version
+
+      - name: Compile srs
+        run: |
+          sing-box rule-set compile ls-direct.json -o ls-direct.srs
+          ls -la ls-direct.srs
+
+      - name: Publish to release branch
+        run: |
+          git init -b release
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ls-direct.srs ls-direct.domains
+          git commit -m "update $(date -u +%F) [skip ci]"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
